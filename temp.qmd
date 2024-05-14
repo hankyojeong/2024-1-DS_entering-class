@@ -1,0 +1,135 @@
+---
+title: "제 2강: 데이터 시각화"
+subtitle: "데이터과학 입문"
+author: "원중호"
+date: today
+date-format: "MMMM YYYY"
+institute: 서울대학교 통계학과
+format:
+  html:
+      embed-resources: true
+      toc: true
+      toc-depth: 2
+  revealjs: 
+      embed-resources: true
+      fontsize : 28pt   
+      output-file: ch02-dataviz_slides.html
+      toc: false
+      theme: dark
+      code-fold: false   
+      scrollable: true   
+mainfont: Noto Sans CJK Korean Light
+jupyter: python3
+---
+
+
+```{python}
+#| echo: false
+import git
+import shutil
+import os
+import pyreadr
+
+# 저장소 클론
+repo = git.Repo.clone_from("https://github.com/cran/MASS.git", "MASS")
+
+# 데이터 디렉토리 경로
+data_dir = "MASS/data/"
+
+# .rda 파일 목록 가져오기
+rda_files = [f for f in os.listdir(data_dir) if f.endswith('whiteside.rda')]
+
+# .rda 파일 복사 및 변환
+for rda_file in rda_files:
+    # .rda 파일 로드
+    result = pyreadr.read_r("MASS/data/" + rda_file)
+    # 로드된 객체의 데이터프레임 가져오기
+    df = result[rda_file.split('.')[0]]
+    # .csv 파일로 저장
+    csv_file = os.path.splitext(rda_file)[0] + '.csv'
+    df.to_csv("./data/" + csv_file, index=False)
+
+# 로컬 저장소 폴더 삭제
+repo.git.execute(['rm','-rf','../MASS'])
+```
+
+
+```{python}
+import pandas as pd
+whiteside = pd.read_csv('./data/whiteside.csv')
+
+# Create a multi-index for the column names
+columns = pd.MultiIndex.from_tuples([('Insul', '<fct>'), ('Temp', '<dbl>'), ('Gas', '<dbl>')])
+
+# Set the multi-index as the column names of the DataFrame
+whiteside.columns = columns
+whiteside.index = whiteside.index +1
+print("# A tibble: {} × {}".format(whiteside.shape[0], whiteside.shape[1]))
+print(whiteside.head(10))
+
+# Print the message indicating more rows
+print("# ℹ", len(whiteside) - 10, "more rows")
+```
+
+```{python}
+#| echo: false
+whiteside = pd.read_csv('./data/whiteside.csv')
+whiteside.index = whiteside.index +1
+```
+
+
+```{python}
+from plotnine import *
+
+# 현재 Insul column의 dtype이 object라서 categorical type으로 변경해주고 순서를 부여.
+whiteside['Insul'] = pd.Categorical(whiteside['Insul'], categories=['Before', 'After'], ordered=True)
+
+
+(ggplot(whiteside, aes(x='Temp', y='Gas')) +
+    geom_smooth(method="lm", color='blue') +
+    geom_point() +
+    facet_wrap('~Insul', nrow=1) +
+    labs(x="Average external temperature (deg. C)", y="Gas consumption (1000 cubic feet)"))
+
+```
+
+```{python}
+#| echo: false
+print('lm(formula, data, subset, weights, na.action)')
+```
+
+```{python}
+import statsmodels.api as sm
+import pandas as pd
+
+# Assume 'whiteside' is your DataFrame
+# Subset selection
+subset_before = whiteside[whiteside['Insul'] == "Before"]
+subset_after = whiteside[whiteside['Insul'] == "After"]
+
+# Define the independent variable (X) and the dependent variable (y)
+X_before = subset_before[['Temp']]
+y_before = subset_before['Gas']
+X_after = subset_after[['Temp']]
+y_after = subset_after['Gas']
+
+# Add a constant term to the independent variable
+X_before = sm.add_constant(X_before)
+X_after = sm.add_constant(X_after)
+
+# Fit the linear regression model
+gasB = sm.OLS(y_before, X_before).fit()
+gasA= sm.OLS(y_after, X_after).fit()
+```
+
+```{python}
+
+residuals_squared_sum_B = (gasB.resid ** 2).sum()  
+residual_standard_error_B = (residuals_squared_sum / gasB.df_resid) ** 0.5  
+
+print('## Coefficients:')
+print(gasB_model.summary().tables[1]) 
+print('## ---')
+print("##")
+print("## Residual standard error:", "{:.4f}".format(residual_standard_error_B), "on", gasB.df_resid, "degrees of freedom")
+```
