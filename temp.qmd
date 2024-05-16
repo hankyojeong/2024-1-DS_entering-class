@@ -119,17 +119,46 @@ X_after = sm.add_constant(X_after)
 
 # Fit the linear regression model
 gasB = sm.OLS(y_before, X_before).fit()
-gasA= sm.OLS(y_after, X_after).fit()
+gasA = sm.OLS(y_after, X_after).fit()
 ```
 
 ```{python}
 
 residuals_squared_sum_B = (gasB.resid ** 2).sum()  
-residual_standard_error_B = (residuals_squared_sum / gasB.df_resid) ** 0.5  
+residual_standard_error_B = (residuals_squared_sum_B / gasB.df_resid) ** 0.5  
 
 print('## Coefficients:')
-print(gasB_model.summary().tables[1]) 
+print(gasB.summary().tables[1]) 
 print('## ---')
 print("##")
 print("## Residual standard error:", "{:.4f}".format(residual_standard_error_B), "on", gasB.df_resid, "degrees of freedom")
+```
+
+```{python}
+residuals_squared_sum_A = (gasA.resid ** 2).sum()  
+residual_standard_error_A = (residuals_squared_sum_A / gasA.df_resid) ** 0.5  
+
+print('## Coefficients:')
+print(gasA.summary().tables[1]) 
+print('## ---')
+print("##")
+print("## Residual standard error:", "{:.4f}".format(residual_standard_error_A), "on", gasA.df_resid, "degrees of freedom")
+```
+
+
+```{python}
+varB = sum((x) ** 2 for x in gasB.resid) / gasB.df_resid
+print("{:.8f}".format(varB))
+```
+
+
+```{python}
+varB = gasB.mse_resid
+print("{:.8f}".format(varB))
+```
+
+
+```{python}
+gasBA = sm.formula.ols(formula = 'Gas ~ Insul / Temp -1', data=whiteside).fit()
+print(gasBA.summary2())
 ```
